@@ -25,7 +25,7 @@ public class CustomerQueue {
         if (!customerQueue.isEmpty()) {
             Customer customer = customerQueue.poll();
             System.out.println("Customer " + customer.getId() + " is placing an order: " + customer.getOrder().name());
-            orderQueue.addOrder(customer.getOrder());
+            orderQueue.addOrder(customer, customer.getOrder());
         } else {
             System.out.println("No customers in the queue.");
         }
