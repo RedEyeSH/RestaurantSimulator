@@ -11,6 +11,7 @@ public class OrderQueue {
         this.orderCustomerMap = new HashMap<>();
     }
 
+    // ✅ FIX: Modify addOrder to support multiple customers per meal type
     public void addOrder(Customer customer, Menu.MealType meal) {
         orderQueue.offer(meal);
         orderCustomerMap.putIfAbsent(meal, new LinkedList<>()); // Initialize queue if not exists
@@ -18,6 +19,7 @@ public class OrderQueue {
         System.out.println("Customer " + customer.getId() + " ordered " + meal.name() + ".");
     }
 
+    // ✅ FIX: Modify processOrders to correctly assign meals to customers
     public void processOrders() {
         while (true) {
             if (!orderQueue.isEmpty()) {
@@ -44,8 +46,9 @@ public class OrderQueue {
                     }
                 }).start();
             }
+
             try {
-                Thread.sleep(1);
+                Thread.sleep(500); // Avoid CPU overuse
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
