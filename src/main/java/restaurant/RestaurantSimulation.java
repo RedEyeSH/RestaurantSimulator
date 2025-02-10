@@ -23,6 +23,7 @@ public class RestaurantSimulation {
 
                 try {
                     Thread.sleep(random.nextInt(5000) + 2000); // New customer every 2-7 seconds
+                    // Rush hour fucntion perhaps, and maybe optimize customers incoming
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
