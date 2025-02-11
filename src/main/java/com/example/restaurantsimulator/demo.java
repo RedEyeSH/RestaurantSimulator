@@ -77,7 +77,7 @@ public class demo extends Application {
         new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(2000);
                     int id = customerID.getAndIncrement();
                     long startTime = System.currentTimeMillis();
                     Platform.runLater(() -> addCustomerToQueue(id, startTime));
@@ -95,19 +95,21 @@ public class demo extends Application {
         processQueue();
     }
 
-    private void processQueue() {
+    private synchronized void processQueue() {
+        // Only proceed if there are available machines and the queue is not empty
         while (activeOrders < availableMachines && !queue.isEmpty()) {
-            int id = queue.poll();
-            activeOrders++;
+            int id = queue.poll(); // Retrieve customer from the queue
+            activeOrders++; // Increment the active orders count
             orderingLabel.setText("Ordering (" + activeOrders + "):");
             orderingContent.setText(orderingContent.getText() + "Customer " + id + " is ordering\n");
             updateQueueLabel();
 
+            // Start a new thread to simulate the ordering process
             new Thread(() -> {
                 try {
-                    Thread.sleep(7000);
+                    Thread.sleep(7000); // Simulate ordering time
                     String food = foodOptions[random.nextInt(foodOptions.length)];
-                    Platform.runLater(() -> moveToWaiting(id, food));
+                    Platform.runLater(() -> moveToWaiting(id, food)); // Move to waiting stage
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -116,27 +118,31 @@ public class demo extends Application {
     }
 
     private void moveToWaiting(int id, String food) {
-        orderingContent.setText(orderingContent.getText().replace("Customer " + id + " is ordering\n", ""));
+        String currentText = orderingContent.getText();
+        orderingContent.setText(currentText.replaceFirst("Customer " + id + " is ordering\\n", ""));
+
         activeOrders--;
         orderingLabel.setText("Ordering (" + activeOrders + "):");
 
-        waitingList.add("Customer " + id + " is waiting");
+        String orderDetails = "Customer " + id + " is waiting for " + food;
+        waitingList.add(orderDetails);
         updateWaitingLabel();
+
         processQueue();
+
         moveToKitchen(id, food);
     }
 
     private void moveToKitchen(int id, String food) {
-        waitingList.removeIf(order -> order.startsWith("Customer " + id));
-        updateWaitingLabel();
-
-        kitchenList.add("Customer " + id + " - " + food + " is preparing");
+        String orderDetails = "Customer " + id + " - " + food + " is preparing";
+        kitchenList.add(orderDetails);
         updateKitchenLabel();
 
+        // Simulate kitchen preparation
         new Thread(() -> {
             try {
-                Thread.sleep(10000);
-                Platform.runLater(() -> moveToServed(id, food));
+                Thread.sleep(10000); // Simulate kitchen preparation time
+                Platform.runLater(() -> moveToServed(id, food)); // Move to served stage
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -144,29 +150,36 @@ public class demo extends Application {
     }
 
     private void moveToServed(int id, String food) {
-        kitchenList.removeIf(order -> order.startsWith("Customer " + id));
-        updateKitchenLabel();
+        String orderDetails = "Customer " + id + " - " + food + " served";
+        servedList.add(orderDetails);
 
-        servedList.add("Customer " + id + " - " + food + " served");
+        // Remove from waiting and kitchen lists as the order is now served
+        waitingList.removeIf(order -> order.startsWith("Customer " + id));
+        kitchenList.removeIf(order -> order.startsWith("Customer " + id));
+
+        updateWaitingLabel();
+        updateKitchenLabel();
         updateServedLabel();
 
+        // Simulate customer leaving after served
         new Thread(() -> {
             try {
                 int leaveTime = random.nextInt(5001) + 10000;
-                Thread.sleep(leaveTime);
-                Platform.runLater(() -> moveToLeft(id));
+                Thread.sleep(leaveTime); // Random time before the customer leaves
+                Platform.runLater(() -> moveToLeft(id)); // Move to left stage
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }).start();
     }
 
-    private void moveToLeft(int id) {
+    private synchronized void moveToLeft(int id) {
         long startTime = customerArrivalTimes.get(id);
         long totalTime = System.currentTimeMillis() - startTime;
         leftList.add("Customer " + id + " left after " + formatTime(totalTime));
         customerArrivalTimes.remove(id);
 
+        // Remove from served list as the customer has left
         servedList.removeIf(order -> order.startsWith("Customer " + id));
         updateLeftLabel();
         updateServedLabel();
