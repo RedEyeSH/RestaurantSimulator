@@ -1,4 +1,4 @@
-package restaurant.utils;
+package com.restaurant.utils;
 
 public class DatabaseHelper {
 }

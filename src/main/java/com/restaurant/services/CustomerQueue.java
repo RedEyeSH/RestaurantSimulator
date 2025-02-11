@@ -1,7 +1,4 @@
-package restaurant.services;
-
-import restaurant.services.Customer;
-import restaurant.services.OrderQueue;
+package com.restaurant.services;
 
 import java.util.LinkedList;
 import java.util.Queue;

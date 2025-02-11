@@ -3,6 +3,7 @@ package com.example.restaurantsimulator;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -13,18 +14,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class demo extends Application {
+    private static final int MAX_MACHINES = 3;
     private Queue<Integer> queue = new LinkedList<>();
     private Queue<String> waitingList = new LinkedList<>();
     private Queue<String> kitchenList = new LinkedList<>();
     private Queue<String> servedList = new LinkedList<>();
     private Queue<String> leftList = new LinkedList<>();
 
-    private Map<Integer, Long> customerArrivalTimes = new ConcurrentHashMap<>(); // Store each customer's arrival time
-
+    private Map<Integer, Long> customerArrivalTimes = new ConcurrentHashMap<>();
     private AtomicInteger customerID = new AtomicInteger(1);
 
+    private int availableMachines = 1;
+    private int activeOrders = 0;
+
     private Label queueLabel = new Label("Queue (0):");
-    private Label orderingLabel = new Label("Ordering:");
+    private Label orderingLabel = new Label("Ordering (0):");
     private Label waitingLabel = new Label("Waiting (0):");
     private Label kitchenLabel = new Label("Kitchen (0):");
     private Label servedLabel = new Label("Served (0):");
@@ -37,18 +41,7 @@ public class demo extends Application {
     private Label servedContent = new Label();
     private Label leftContent = new Label();
 
-    {
-        String headingStyle = "-fx-font-size: 18px; -fx-font-weight: bold;";
-
-        queueLabel.setStyle(headingStyle);
-        orderingLabel.setStyle(headingStyle);
-        waitingLabel.setStyle(headingStyle);
-        kitchenLabel.setStyle(headingStyle);
-        servedLabel.setStyle(headingStyle);
-        leftLabel.setStyle(headingStyle);
-    }
-
-    private boolean machineFree = true;
+    private ComboBox<Integer> machineSelector = new ComboBox<>();
     private Random random = new Random();
     private String[] foodOptions = {"Burger", "Pizza", "Pasta", "Sushi", "Salad"};
 
@@ -61,8 +54,17 @@ public class demo extends Application {
         VBox servedBox = new VBox(10, servedLabel, servedContent);
         VBox leftBox = new VBox(10, leftLabel, leftContent);
 
-        HBox root = new HBox(70, queueBox, orderingBox, waitingBox, kitchenBox, servedBox, leftBox);
-        Scene scene = new Scene(root, 1050, 250);
+        HBox mainLayout = new HBox(50, queueBox, orderingBox, waitingBox, kitchenBox, servedBox, leftBox);
+
+        // Dropdown for selecting the number of ordering machines (moved to bottom)
+        machineSelector.getItems().addAll(1, 2, 3);
+        machineSelector.setValue(1);
+        machineSelector.setOnAction(e -> updateOrderingMachines(machineSelector.getValue()));
+
+        VBox controlBox = new VBox(10, new Label("🔧 Select Ordering Machines:"), machineSelector);
+        VBox root = new VBox(20, mainLayout, controlBox);
+
+        Scene scene = new Scene(root, 1150, 350);
 
         primaryStage.setTitle("Restaurant Simulation");
         primaryStage.setScene(scene);
@@ -87,17 +89,18 @@ public class demo extends Application {
     }
 
     private void addCustomerToQueue(int id, long startTime) {
-        customerArrivalTimes.put(id, startTime); // Store when customer arrives
+        customerArrivalTimes.put(id, startTime);
         queue.add(id);
         updateQueueLabel();
         processQueue();
     }
 
     private void processQueue() {
-        if (machineFree && !queue.isEmpty()) {
+        while (activeOrders < availableMachines && !queue.isEmpty()) {
             int id = queue.poll();
-            machineFree = false;
-            orderingContent.setText("Customer " + id + " is ordering");
+            activeOrders++;
+            orderingLabel.setText("Ordering (" + activeOrders + "):");
+            orderingContent.setText(orderingContent.getText() + "Customer " + id + " is ordering\n");
             updateQueueLabel();
 
             new Thread(() -> {
@@ -113,19 +116,21 @@ public class demo extends Application {
     }
 
     private void moveToWaiting(int id, String food) {
-        orderingContent.setText("");
-        String orderDetails = "Customer " + id + " is waiting";
-        waitingList.add(orderDetails);
+        orderingContent.setText(orderingContent.getText().replace("Customer " + id + " is ordering\n", ""));
+        activeOrders--;
+        orderingLabel.setText("Ordering (" + activeOrders + "):");
+
+        waitingList.add("Customer " + id + " is waiting");
         updateWaitingLabel();
-        machineFree = true;
         processQueue();
         moveToKitchen(id, food);
     }
 
     private void moveToKitchen(int id, String food) {
-        String orderDetails = "Customer " + id + " - " + food + " is preparing";
-        kitchenList.add(orderDetails);
+        waitingList.removeIf(order -> order.startsWith("Customer " + id));
         updateWaitingLabel();
+
+        kitchenList.add("Customer " + id + " - " + food + " is preparing");
         updateKitchenLabel();
 
         new Thread(() -> {
@@ -139,15 +144,10 @@ public class demo extends Application {
     }
 
     private void moveToServed(int id, String food) {
-
-        String orderDetails = "Customer " + id + " - " + food + " served";
-        servedList.add(orderDetails);
-
-        waitingList.removeIf(order -> order.startsWith("Customer " + id));
         kitchenList.removeIf(order -> order.startsWith("Customer " + id));
-
-        updateWaitingLabel();
         updateKitchenLabel();
+
+        servedList.add("Customer " + id + " - " + food + " served");
         updateServedLabel();
 
         new Thread(() -> {
@@ -164,12 +164,10 @@ public class demo extends Application {
     private void moveToLeft(int id) {
         long startTime = customerArrivalTimes.get(id);
         long totalTime = System.currentTimeMillis() - startTime;
-        String leftDetails = "Customer " + id + " left after " + formatTime(totalTime);
-        leftList.add(leftDetails);
+        leftList.add("Customer " + id + " left after " + formatTime(totalTime));
         customerArrivalTimes.remove(id);
 
         servedList.removeIf(order -> order.startsWith("Customer " + id));
-
         updateLeftLabel();
         updateServedLabel();
     }
@@ -198,6 +196,7 @@ public class demo extends Application {
         leftLabel.setText("Left (" + leftList.size() + "):");
         leftContent.setText(String.join("\n", leftList));
     }
+
     private String formatTime(long millis) {
         long seconds = millis / 1000;
         if (seconds < 60) {
@@ -205,6 +204,11 @@ public class demo extends Application {
         } else {
             return (seconds / 60) + " min " + (seconds % 60) + " sec";
         }
+    }
+
+    private void updateOrderingMachines(int machines) {
+        availableMachines = machines;
+        processQueue();
     }
 
     public static void main(String[] args) {

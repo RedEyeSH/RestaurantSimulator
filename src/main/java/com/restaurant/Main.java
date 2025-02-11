@@ -1,4 +1,4 @@
-package restaurant;
+package com.restaurant;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -11,7 +11,7 @@ import javafx.scene.control.Label;
 public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/restaurant/views/MainView.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/com.restaurant/views/MainView.fxml"));
         Scene scene = new Scene(loader.load());
         primaryStage.setTitle("Restaurant Simulation");
         primaryStage.setScene(scene);
@@ -24,3 +24,4 @@ public class Main extends Application {
         launch(args);
     }
 }
+

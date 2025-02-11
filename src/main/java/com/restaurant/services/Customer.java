@@ -1,10 +1,4 @@
-package restaurant.services;
-import restaurant.services.Menu;
-
-import restaurant.services.Menu;
-
-import java.util.Random;
-import java.util.ArrayList;
+package com.restaurant.services;
 
 public class Customer {
     private static int idCounter = 1;
@@ -54,7 +48,6 @@ public class Customer {
     }
 }
 
-
 /*
 public class Customer {
     private int id;
@@ -97,4 +90,4 @@ public class Customer {
     }
 }
 
- */
+*/
