@@ -1,9 +1,9 @@
 package com.restaurant;
 
-import com.restaurant.services.Customer;
-import com.restaurant.services.CustomerQueue;
-import com.restaurant.services.Menu;
-import com.restaurant.services.OrderQueue;
+import com.example.restaurantsimulator.services.Customer;
+import com.example.restaurantsimulator.services.CustomerQueue;
+import com.example.restaurantsimulator.services.Menu;
+import com.example.restaurantsimulator.services.OrderQueue;
 
 import java.util.Random;
 import java.util.Scanner;

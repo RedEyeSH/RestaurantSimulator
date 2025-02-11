@@ -1,4 +1,4 @@
-package com.restaurant.services;
+package com.example.restaurantsimulator.services;
 
 import java.util.LinkedList;
 import java.util.Queue;

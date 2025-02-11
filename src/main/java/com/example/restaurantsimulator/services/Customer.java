@@ -1,4 +1,4 @@
-package com.restaurant.services;
+package com.example.restaurantsimulator.services;
 
 public class Customer {
     private static int idCounter = 1;

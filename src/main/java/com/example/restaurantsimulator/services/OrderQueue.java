@@ -1,4 +1,4 @@
-package com.restaurant.services;
+package com.example.restaurantsimulator.services;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -29,6 +29,8 @@ public class OrderQueue {
                     Queue<Customer> customerQueue = orderCustomerMap.get(meal);
                     Customer customer = (customerQueue != null) ? customerQueue.poll() : null;
 
+                    System.out.println("Chef is processing: " + meal.name()); // Add this line
+
                     chefPool.submit(() -> {  // Assigns order to an available chef
                         System.out.println("Processing order: " + meal.name() + " (Takes " + meal.getPrepTime() + " minutes)");
                         try {
@@ -36,7 +38,7 @@ public class OrderQueue {
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                         }
-                        System.out.println(meal.name() + " is ready!");
+                        System.out.println(meal.name() + " is ready!"); // Add this line
 
                         if (customer != null) {
                             customer.receiveOrder();
@@ -52,9 +54,5 @@ public class OrderQueue {
                 }
             }
         }).start();
-    }
-
-    public void shutdownKitchen() {
-        chefPool.shutdown(); // Gracefully shut down all chef threads
     }
 }
