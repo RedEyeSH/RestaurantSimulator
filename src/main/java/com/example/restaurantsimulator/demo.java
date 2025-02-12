@@ -243,8 +243,6 @@ public class demo extends Application {
     }
 
 
-
-
     private void updateQueueLabel() {
         queueLabel.setText("Queue (" + queue.size() + "):");
         queueContent.setText(String.join("\n", queue.stream().map(i -> "Customer " + i + " is in the queue").toArray(String[]::new)));
