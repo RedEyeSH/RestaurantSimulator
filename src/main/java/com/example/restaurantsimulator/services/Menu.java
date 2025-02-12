@@ -1,4 +1,4 @@
-package com.restaurant.services;
+package com.example.restaurantsimulator.services;
 
 public class Menu {
     public enum MealType {
