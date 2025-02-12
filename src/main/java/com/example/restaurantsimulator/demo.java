@@ -132,19 +132,19 @@ public class demo extends Application {
     }
 
     private void moveToKitchen(int id, Menu.MealType meal) {
-        // Remove from the waiting list
-        waitingList.removeIf(order -> order.startsWith("Customer " + id));
+//        // Ensure the customer is in the waiting list before moving to the kitchen
+//        waitingList.add("Customer " + id + " is waiting for " + meal.name());
         updateWaitingLabel();
 
-        // Add to the kitchen list
+        // Add to kitchen list
         kitchenList.add("Customer " + id + " - " + meal.name() + " is preparing");
         updateKitchenLabel();
 
-        // Simulate the time it takes to prepare the meal
+        // Simulate meal preparation time
         new Thread(() -> {
             try {
-                Thread.sleep(meal.getPrepTime() * 1000L); // Meal prep time in seconds
-                Platform.runLater(() -> moveToServed(id, meal)); // Once done, move to served
+                Thread.sleep(meal.getPrepTime() * 1000L);
+                Platform.runLater(() -> moveToServed(id, meal));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -152,22 +152,24 @@ public class demo extends Application {
     }
 
     private void moveToServed(int id, Menu.MealType meal) {
-        // Remove the order from the kitchen list once it's prepared
+        // Remove the customer from the waiting list once the meal is served
+        waitingList.removeIf(order -> order.startsWith("Customer " + id));
+        updateWaitingLabel();
+
+        // Remove from kitchen list
         kitchenList.removeIf(order -> order.startsWith("Customer " + id));
         updateKitchenLabel();
 
-        // Add the order to the served list
+        // Add to served list
         servedList.add("Customer " + id + " - " + meal.name() + " served");
         updateServedLabel();
 
-        // Now, simulate the customer receiving the order
+        // Simulate customer leaving
         new Thread(() -> {
             try {
-                // Simulate the customer time before leaving (it could be any time)
                 int leaveTime = random.nextInt(5001) + 10000; // 10-15 seconds before they leave
                 Thread.sleep(leaveTime);
-
-                Platform.runLater(() -> moveToLeft(id, meal)); // After the waiting time, they leave
+                Platform.runLater(() -> moveToLeft(id, meal));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
