@@ -132,8 +132,6 @@ public class demo extends Application {
     }
 
     private void moveToKitchen(int id, Menu.MealType meal) {
-//        // Ensure the customer is in the waiting list before moving to the kitchen
-//        waitingList.add("Customer " + id + " is waiting for " + meal.name());
         updateWaitingLabel();
 
         // Add to kitchen list
