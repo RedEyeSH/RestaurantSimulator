@@ -7,6 +7,7 @@ public class OrderQueue {
     private PriorityBlockingQueue<Menu.MealType> orderQueue; // Thread-safe priority queue
     private Map<Menu.MealType, Queue<Customer>> orderCustomerMap;
     private ExecutorService chefPool; // Thread pool for chefs
+    private int availableChefs;
 
     public OrderQueue(int numChefs) {
         this.orderQueue = new PriorityBlockingQueue<>(10, Comparator.comparingInt(Menu.MealType::getPrepTime));
@@ -20,6 +21,11 @@ public class OrderQueue {
         orderCustomerMap.get(meal).offer(customer);
         System.out.println("Customer " + customer.getId() + " ordered " + meal.name() + ".");
     }
+
+    public void setChefs(int chefs) {
+        this.availableChefs = chefs;
+    }
+
 
     public void processOrders() {
         new Thread(() -> {

@@ -51,6 +51,9 @@ public class demo extends Application {
 
     private OrderQueue orderQueue; // Using OrderQueue to manage orders
 
+    private int activeKitchenOrders = 0;
+    private int availableChefs = 1; // Default chef count
+
     @Override
     public void start(Stage primaryStage) {
         VBox queueBox = new VBox(10, queueLabel, queueContent);
@@ -66,11 +69,18 @@ public class demo extends Application {
         machineSelector.getItems().addAll(1, 2, 3);
         machineSelector.setValue(1);
         machineSelector.setOnAction(e -> updateOrderingMachines(machineSelector.getValue()));
+        ComboBox<Integer> chefSelector = new ComboBox<>();
+        chefSelector.getItems().addAll(1, 2, 3, 4, 5); // Adjust max chefs as needed
+        chefSelector.setValue(1);
+        chefSelector.setOnAction(e -> updateChefs(chefSelector.getValue()));
 
-        VBox controlBox = new VBox(10, new Label("🔧 Select Ordering Machines:"), machineSelector);
-        VBox root = new VBox(20, mainLayout, controlBox);
+        VBox controlBox = new VBox(10,
+                new Label("🔧 Select Ordering Machines:"), machineSelector,
+                new Label("👨‍🍳 Select Number of Chefs:"), chefSelector
+        );        VBox root = new VBox(20, mainLayout, controlBox);
 
         Scene scene = new Scene(root, 1150, 350);
+
 
         primaryStage.setTitle("Restaurant Simulation");
         primaryStage.setScene(scene);
@@ -93,7 +103,10 @@ public class demo extends Application {
                 }
             }
         }).start();
+
+        startKitchenWorker(); // Start monitoring kitchen availability
     }
+
 
     private void addCustomerToQueue(int id, long startTime) {
         customerArrivalTimes.put(id, startTime);
@@ -132,16 +145,20 @@ public class demo extends Application {
     }
 
     private void moveToKitchen(int id, Menu.MealType meal) {
+        if (activeKitchenOrders >= availableChefs) {
+            return; // Kitchen is full, don't move customer yet
+        }
+
+        activeKitchenOrders++; // A chef starts working
+        waitingList.removeIf(order -> order.startsWith("Customer " + id));
         updateWaitingLabel();
 
-        // Add to kitchen list
         kitchenList.add("Customer " + id + " - " + meal.name() + " is preparing");
         updateKitchenLabel();
 
-        // Simulate meal preparation time
         new Thread(() -> {
             try {
-                Thread.sleep(meal.getPrepTime() * 1000L);
+                Thread.sleep(meal.getPrepTime() * 1000L); // Simulate preparation time
                 Platform.runLater(() -> moveToServed(id, meal));
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -149,23 +166,20 @@ public class demo extends Application {
         }).start();
     }
 
-    private void moveToServed(int id, Menu.MealType meal) {
-        // Remove the customer from the waiting list once the meal is served
-        waitingList.removeIf(order -> order.startsWith("Customer " + id));
-        updateWaitingLabel();
 
-        // Remove from kitchen list
+    private void moveToServed(int id, Menu.MealType meal) {
         kitchenList.removeIf(order -> order.startsWith("Customer " + id));
         updateKitchenLabel();
 
-        // Add to served list
         servedList.add("Customer " + id + " - " + meal.name() + " served");
         updateServedLabel();
 
-        // Simulate customer leaving
+        activeKitchenOrders--; // Free up a chef slot for the next order
+        processWaitingList();  // Check if a new order can move into the kitchen
+
         new Thread(() -> {
             try {
-                int leaveTime = random.nextInt(5001) + 10000; // 10-15 seconds before they leave
+                int leaveTime = random.nextInt(5001) + 10000;
                 Thread.sleep(leaveTime);
                 Platform.runLater(() -> moveToLeft(id, meal));
             } catch (InterruptedException e) {
@@ -173,6 +187,19 @@ public class demo extends Application {
             }
         }).start();
     }
+
+    private void processWaitingList() {
+        if (!waitingList.isEmpty() && activeKitchenOrders < availableChefs) {
+            String waitingCustomer = waitingList.poll();
+            if (waitingCustomer != null) {
+                String[] parts = waitingCustomer.split(" ");
+                int id = Integer.parseInt(parts[1]); // Extract customer ID
+                Menu.MealType meal = Menu.MealType.valueOf(parts[5]); // Extract meal type
+                moveToKitchen(id, meal);
+            }
+        }
+    }
+
 
     private void moveToLeft(int id, Menu.MealType meal) {
         // Get the time when the customer first arrived
@@ -205,18 +232,17 @@ public class demo extends Application {
 
 
     private void moveToWaiting(int id, Menu.MealType meal) {
-        // Remove customer from the ordering content and update active orders
         orderingContent.setText(orderingContent.getText().replace("Customer " + id + " is ordering\n", ""));
         activeOrders--;
         orderingLabel.setText("Ordering (" + activeOrders + "):");
 
-        // Add customer to the waiting list and update the waiting label
         waitingList.add("Customer " + id + " is waiting for " + meal.name());
         updateWaitingLabel();
 
-        // Move the customer to the kitchen after adding them to the waiting list
-        Platform.runLater(() -> moveToKitchen(id, meal));
+        processWaitingList(); // Check if we can move this customer into the kitchen
     }
+
+
 
     private void updateQueueLabel() {
         queueLabel.setText("Queue (" + queue.size() + "):");
@@ -248,6 +274,45 @@ public class demo extends Application {
         orderQueue = new OrderQueue(availableMachines);  // Reinitialize the order queue with new number of chefs
         processQueue();
     }
+
+    // Modifying amount of chefs
+    private void updateChefs(int chefs) {
+        availableChefs = chefs;
+        orderQueue.setChefs(chefs);
+        processWaitingList(); // Immediately check if new chefs can start work
+    }
+
+
+    // Kitchen worker
+    // Kitchen worker - Monitors and moves waiting customers when space is available
+    private void startKitchenWorker() {
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(1000); // Check every second
+
+                    Platform.runLater(() -> {
+                        if (!waitingList.isEmpty() && activeKitchenOrders < availableChefs) {
+                            // Move the first waiting customer into the kitchen
+                            String waitingCustomer = waitingList.poll();
+                            if (waitingCustomer != null) {
+                                String[] parts = waitingCustomer.split(" ");
+                                int id = Integer.parseInt(parts[1]); // Extract customer ID
+                                Menu.MealType meal = Menu.MealType.valueOf(parts[5]); // Extract meal type
+                                moveToKitchen(id, meal);
+                            }
+                        }
+                    });
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+
+
 
     public static void main(String[] args) {
         launch(args);
