@@ -25,6 +25,7 @@ public class demo extends Application {
     private Queue<String> kitchenList = new LinkedList<>();
     private Queue<String> servedList = new LinkedList<>();
     private Queue<String> leftList = new LinkedList<>();
+    private Queue<String> hiddenOrderList = new LinkedList<>();
 
     private Map<Integer, Long> customerArrivalTimes = new ConcurrentHashMap<>();
     private AtomicInteger customerID = new AtomicInteger(1);
@@ -94,7 +95,7 @@ public class demo extends Application {
         new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(5000);
                     int id = customerID.getAndIncrement();
                     long startTime = System.currentTimeMillis();
                     Platform.runLater(() -> addCustomerToQueue(id, startTime));
@@ -144,18 +145,6 @@ public class demo extends Application {
         }
     }
 
-    private void moveToWaiting(int id, Menu.MealType meal) {
-        orderingContent.setText(orderingContent.getText().replace("Customer " + id + " is ordering\n", ""));
-        activeOrders--;
-        orderingLabel.setText("Ordering (" + activeOrders + "):");
-
-        waitingList.add("Customer " + id + " is waiting for " + meal.name());
-        updateWaitingLabel();
-
-        processWaitingList(); // Check if we can move this customer into the kitchen
-    }
-
-
     private void moveToKitchen(int id, Menu.MealType meal) {
         if (activeKitchenOrders >= availableChefs) {
             return; // Kitchen is full, don't move customer yet
@@ -180,14 +169,15 @@ public class demo extends Application {
     private void moveToServed(int id, Menu.MealType meal) {
         kitchenList.removeIf(order -> order.startsWith("Customer " + id));
         updateKitchenLabel();
-        waitingList.removeIf(order -> order.startsWith("Customer " + id));
-        updateWaitingLabel();
 
         servedList.add("Customer " + id + " - " + meal.name() + " served");
         updateServedLabel();
 
         activeKitchenOrders--; // Free up a chef slot for the next order
         processWaitingList();  // Check if a new order can move into the kitchen
+
+        waitingList.removeIf(order -> order.startsWith("Customer " + id));
+        updateWaitingLabel();
 
         new Thread(() -> {
             try {
@@ -201,12 +191,12 @@ public class demo extends Application {
     }
 
     private void processWaitingList() {
-        if (!waitingList.isEmpty() && activeKitchenOrders < availableChefs) {
-            String waitingCustomer = waitingList.peek();
-            if (waitingCustomer != null) {
-                String[] parts = waitingCustomer.split(" ");
-                int id = Integer.parseInt(parts[1]); // Extract customer ID
-                Menu.MealType meal = Menu.MealType.valueOf(parts[5]); // Extract meal type
+        if (!hiddenOrderList.isEmpty() && activeKitchenOrders < availableChefs) {
+            String order = hiddenOrderList.poll();
+            if (order != null) {
+                String[] parts = order.split(" ");
+                int id = Integer.parseInt(parts[0]); // Extract customer ID
+                Menu.MealType meal = Menu.MealType.valueOf(parts[1]); // Extract meal type
                 moveToKitchen(id, meal);
             }
         }
@@ -241,6 +231,24 @@ public class demo extends Application {
             return (seconds / 60) + " min " + (seconds % 60) + " sec";
         }
     }
+
+
+    private void moveToWaiting(int id, Menu.MealType meal) {
+        orderingContent.setText(orderingContent.getText().replace("Customer " + id + " is ordering\n", ""));
+        activeOrders--;
+        orderingLabel.setText("Ordering (" + activeOrders + "):");
+
+        // Add to visible waiting list for UI
+        waitingList.add("Customer " + id + " is waiting for " + meal.name());
+        updateWaitingLabel();
+
+        // Add to hidden order list for kitchen processing
+        hiddenOrderList.add(id + " " + meal.name());
+
+        processWaitingList(); // Check if we can move an order into the kitchen
+    }
+
+
 
 
     private void updateQueueLabel() {
@@ -291,13 +299,12 @@ public class demo extends Application {
                     Thread.sleep(1000); // Check every second
 
                     Platform.runLater(() -> {
-                        if (!waitingList.isEmpty() && activeKitchenOrders < availableChefs) {
-                            // Move the first waiting customer into the kitchen
-                            String waitingCustomer = waitingList.poll();
-                            if (waitingCustomer != null) {
-                                String[] parts = waitingCustomer.split(" ");
-                                int id = Integer.parseInt(parts[1]); // Extract customer ID
-                                Menu.MealType meal = Menu.MealType.valueOf(parts[5]); // Extract meal type
+                        if (!hiddenOrderList.isEmpty() && activeKitchenOrders < availableChefs) {
+                            String order = hiddenOrderList.poll();
+                            if (order != null) {
+                                String[] parts = order.split(" ");
+                                int id = Integer.parseInt(parts[0]); // Extract customer ID
+                                Menu.MealType meal = Menu.MealType.valueOf(parts[1]); // Extract meal type
                                 moveToKitchen(id, meal);
                             }
                         }
