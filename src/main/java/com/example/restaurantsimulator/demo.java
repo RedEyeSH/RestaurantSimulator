@@ -28,6 +28,8 @@ public class demo extends Application {
     private Queue<String> hiddenOrderList = new LinkedList<>();
 
     private Map<Integer, Long> customerArrivalTimes = new ConcurrentHashMap<>();
+    // Add a map to track time spent in each phase for each customer
+    private Map<Integer, Long[]> customerPhaseTimes = new ConcurrentHashMap<>();
     private AtomicInteger customerID = new AtomicInteger(1);
 
     private int availableMachines = 1;
@@ -64,7 +66,7 @@ public class demo extends Application {
         VBox servedBox = new VBox(10, servedLabel, servedContent);
         VBox leftBox = new VBox(10, leftLabel, leftContent);
 
-        HBox mainLayout = new HBox(50, queueBox, orderingBox, waitingBox, kitchenBox, servedBox, leftBox);
+        HBox mainLayout = new HBox(20, queueBox, orderingBox, waitingBox, kitchenBox, servedBox, leftBox);
 
         // Dropdown for selecting the number of ordering machines
         machineSelector.getItems().addAll(1, 2, 3);
@@ -111,9 +113,27 @@ public class demo extends Application {
 
     private void addCustomerToQueue(int id, long startTime) {
         customerArrivalTimes.put(id, startTime);
+        // Initialize phase times: 0 - queue, 1 - ordering, 2 - waiting, 3 - kitchen, 4 - served
+        customerPhaseTimes.put(id, new Long[5]);
+        customerPhaseTimes.get(id)[0] = startTime;  // Set arrival time in queue
+
         queue.add(id);
         updateQueueLabel();
         processQueue();
+        startQueueTimer(); // Start the real-time timer for queue customers
+    }
+
+    private void startQueueTimer() {
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(1000);
+                    Platform.runLater(this::updateQueueLabel);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     private void processQueue() {
@@ -123,6 +143,7 @@ public class demo extends Application {
             activeOrders++;
             orderingLabel.setText("Ordering (" + activeOrders + "):");
             orderingContent.setText(orderingContent.getText() + "Customer " + id + " is ordering\n");
+            customerPhaseTimes.get(id)[1] = System.currentTimeMillis();  // Set ordering time
             updateQueueLabel();
 
             new Thread(() -> {
@@ -148,6 +169,7 @@ public class demo extends Application {
 
 
     private void moveToKitchen(int id, Menu.MealType meal) {
+        customerPhaseTimes.get(id)[3] = System.currentTimeMillis();  // Set kitchen time
         if (activeKitchenOrders >= availableChefs) {
             return; // Kitchen is full, don't move customer yet
         }
@@ -169,6 +191,7 @@ public class demo extends Application {
 
 
     private void moveToServed(int id, Menu.MealType meal) {
+        customerPhaseTimes.get(id)[4] = System.currentTimeMillis();  // Set served time
         kitchenList.removeIf(order -> order.startsWith("Customer " + id));
         updateKitchenLabel();
 
@@ -210,11 +233,32 @@ public class demo extends Application {
         long startTime = customerArrivalTimes.get(id);
         long totalTime = System.currentTimeMillis() - startTime; // Time spent in the restaurant
 
+        // Calculate time spent in each phase
+        // Initialize phase times: 0 - queue, 1 - ordering, 2 - waiting, 3 - kitchen, 4 - served
+        long queueTime = customerPhaseTimes.get(id)[1] - customerPhaseTimes.get(id)[0];  // Ordering - Queue
+        long orderingTime = customerPhaseTimes.get(id)[2] - customerPhaseTimes.get(id)[1];  // Waiting - Ordering
+        long waitingTime = customerPhaseTimes.get(id)[4] - customerPhaseTimes.get(id)[2];  // Kitchen - Waiting
+        long kitchenTime = customerPhaseTimes.get(id)[4] - customerPhaseTimes.get(id)[3];  // Served - Kitchen
+        long servedTime = System.currentTimeMillis() - customerPhaseTimes.get(id)[4];  // Left - Served
+
+        // Format the total times
+        String queueTimeFormatted = formatTime(queueTime);
+        String orderingTimeFormatted = formatTime(orderingTime);
+        String waitingTimeFormatted = formatTime(waitingTime);
+        String kitchenTimeFormatted = formatTime(kitchenTime);
+        String servedTimeFormatted = formatTime(servedTime);
+
         // Format the total time
         String timeSpent = formatTime(totalTime);
 
         // Add the customer to the left list with their total time spent
-        leftList.add("Customer " + id + " left after " + timeSpent + " (Ordered " + meal.name() + ")");
+        leftList.add("Customer " + id + " left after " + servedTimeFormatted +
+                " (Ordered " + meal.name() + ")\n" +
+                "Queue time: " + queueTimeFormatted +
+                ", Ordering time: " + orderingTimeFormatted +
+                ", Waiting time: " + waitingTimeFormatted +
+                ", Kitchen time: " + kitchenTimeFormatted +
+                ", Served time: " + servedTimeFormatted);
         updateLeftLabel();
 
         // Remove the customer from the served list once they leave
@@ -236,12 +280,13 @@ public class demo extends Application {
 
 
     private void moveToWaiting(int id, Menu.MealType meal) {
+        customerPhaseTimes.get(id)[2] = System.currentTimeMillis();  // Set waiting time
         orderingContent.setText(orderingContent.getText().replace("Customer " + id + " is ordering\n", ""));
         activeOrders--;
         orderingLabel.setText("Ordering (" + activeOrders + "):");
 
         // Add to visible waiting list for UI
-        waitingList.add("Customer " + id + " is waiting for " + meal.name());
+        waitingList.add("Customer " + id + " is waiting");
         updateWaitingLabel();
 
         // Add to hidden order list for kitchen processing
@@ -256,7 +301,15 @@ public class demo extends Application {
 
     private void updateQueueLabel() {
         queueLabel.setText("Queue (" + queue.size() + "):");
-        queueContent.setText(String.join("\n", queue.stream().map(i -> "Customer " + i + " is in the queue").toArray(String[]::new)));
+        StringBuilder sb = new StringBuilder();
+        long currentTime = System.currentTimeMillis();
+
+        for (int id : queue) {
+            long elapsedTime = currentTime - customerArrivalTimes.get(id);
+            sb.append("Customer ").append(id).append(" - Waiting for ")
+                    .append(formatTime(elapsedTime)).append("\n");
+        }
+        queueContent.setText(sb.toString());
     }
 
     private void updateWaitingLabel() {
@@ -326,4 +379,5 @@ public class demo extends Application {
     public static void main(String[] args) {
         launch(args);
     }
+
 }
