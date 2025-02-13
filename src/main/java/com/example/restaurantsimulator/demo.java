@@ -95,7 +95,7 @@ public class demo extends Application {
         new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(2000);
                     int id = customerID.getAndIncrement();
                     long startTime = System.currentTimeMillis();
                     Platform.runLater(() -> addCustomerToQueue(id, startTime));
@@ -117,6 +117,7 @@ public class demo extends Application {
     }
 
     private void processQueue() {
+        // Continuously check if there are free machines and customers in the queue
         while (activeOrders < availableMachines && !queue.isEmpty()) {
             int id = queue.poll();
             activeOrders++;
@@ -144,6 +145,7 @@ public class demo extends Application {
             }).start();
         }
     }
+
 
     private void moveToKitchen(int id, Menu.MealType meal) {
         if (activeKitchenOrders >= availableChefs) {
@@ -246,6 +248,7 @@ public class demo extends Application {
         hiddenOrderList.add(id + " " + meal.name());
 
         processWaitingList(); // Check if we can move an order into the kitchen
+        processQueue();
     }
 
 
