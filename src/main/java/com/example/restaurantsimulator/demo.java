@@ -436,8 +436,5 @@ public class demo extends Application {
             System.out.println("Served: " + formatTime(servedTime));
             System.out.println("Total Time in Restaurant: " + formatTime(queueTime + orderingTime + waitingTime  + servedTime));
         }
-
-
     }
-
 }
