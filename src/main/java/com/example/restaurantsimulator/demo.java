@@ -54,9 +54,6 @@ public class demo extends Application {
     private int activeKitchenOrders = 0;
     private int availableChefs = 1; // Default chef count
 
-    // Store timers for each customer at each stage
-    private Map<Integer, CustomerTimers> customerTimers = new HashMap<>();
-
     @Override
     public void start(Stage primaryStage) {
         VBox queueBox = new VBox(10, queueLabel, queueContent);
@@ -69,7 +66,7 @@ public class demo extends Application {
         HBox mainLayout = new HBox(50, queueBox, orderingBox, waitingBox, kitchenBox, servedBox, leftBox);
 
         // Dropdown for selecting the number of ordering machines
-        machineSelector.getItems().addAll(1, 2, 3);
+        machineSelector.getItems().addAll(1, 2, 3, 4, 5);
         machineSelector.setValue(1);
         machineSelector.setOnAction(e -> updateOrderingMachines(machineSelector.getValue()));
         ComboBox<Integer> chefSelector = new ComboBox<>();
@@ -90,6 +87,7 @@ public class demo extends Application {
 
         orderQueue = new OrderQueue(availableMachines);  // Initialize the order queue with chefs
         startSimulation();
+        startQueueTimer(); // Start the real-time timer for queue customers
     }
 
     private void startSimulation() {
@@ -98,7 +96,8 @@ public class demo extends Application {
                 try {
                     Thread.sleep(2000);
                     int id = customerID.getAndIncrement();
-                    long startTime = System.currentTimeMillis();
+                    long startTime = System.currentTimeMillis()
+                    ;
                     Platform.runLater(() -> addCustomerToQueue(id, startTime));
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -109,18 +108,11 @@ public class demo extends Application {
         startKitchenWorker(); // Start monitoring kitchen availability
     }
 
-
     private void addCustomerToQueue(int id, long startTime) {
         customerArrivalTimes.put(id, startTime);
         queue.add(id);
-
-        // Initialize timers for the customer
-        customerTimers.put(id, new CustomerTimers());
-        customerTimers.get(id).startQueue();
-
         updateQueueLabel();
         processQueue();
-        startQueueTimer(); // Start the real-time timer for queue customers
     }
 
     private void startQueueTimer() {
@@ -137,6 +129,7 @@ public class demo extends Application {
     }
 
     private void processQueue() {
+        // Continuously check if there are free machines and customers in the queue
         while (activeOrders < availableMachines && !queue.isEmpty()) {
             int id = queue.poll();
             activeOrders++;
@@ -144,13 +137,10 @@ public class demo extends Application {
             orderingContent.setText(orderingContent.getText() + "Customer " + id + " is ordering\n");
             updateQueueLabel();
 
-            // Start timer when the customer enters ordering
-            customerTimers.get(id).endQueue();
-            customerTimers.get(id).startOrdering();
-
             new Thread(() -> {
                 try {
-                    Thread.sleep(7000); // Simulate time for customer to place order
+                    int orderingTime = 10000 + random.nextInt(11000);
+                    Thread.sleep(orderingTime); // Simulate time for customer to place order
 
                     // Randomly select a meal from the Menu class
                     int index = random.nextInt(Menu.MealType.values().length);
@@ -169,26 +159,6 @@ public class demo extends Application {
         }
     }
 
-    private void moveToWaiting(int id, Menu.MealType meal) {
-        customerTimers.get(id).endOrdering();
-        orderingContent.setText(orderingContent.getText().replace("Customer " + id + " is ordering\n", ""));
-        activeOrders--;
-        orderingLabel.setText("Ordering (" + activeOrders + "):");
-
-        // Add to visible waiting list for UI
-        waitingList.add("Customer " + id + " is waiting for " + meal.name());
-        updateWaitingLabel();
-
-        // Add to hidden order list for kitchen processing
-        hiddenOrderList.add(id + " " + meal.name());
-
-        // Start the timer when the customer enters the waiting list
-        customerTimers.get(id).startWaiting();
-
-        processWaitingList(); // Check if we can move an order into the kitchen
-        processQueue();
-    }
-
     private void moveToKitchen(int id, Menu.MealType meal) {
         if (activeKitchenOrders >= availableChefs) {
             return; // Kitchen is full, don't move customer yet
@@ -198,9 +168,6 @@ public class demo extends Application {
 
         kitchenList.add("Customer " + id + " - " + meal.name() + " is preparing");
         updateKitchenLabel();
-
-        // Start timer when the customer enters kitchen
-        customerTimers.get(id).startKitchen();
 
         new Thread(() -> {
             try {
@@ -226,12 +193,6 @@ public class demo extends Application {
         waitingList.removeIf(order -> order.startsWith("Customer " + id));
         updateWaitingLabel();
 
-        // Stop timer when customer enters served list
-        customerTimers.get(id).startServed();
-        customerTimers.get(id).endWaiting();
-        customerTimers.get(id).endKitchen();
-
-
         new Thread(() -> {
             try {
                 int leaveTime = random.nextInt(5001) + 10000;
@@ -242,6 +203,19 @@ public class demo extends Application {
             }
         }).start();
     }
+
+    private void processWaitingList() {
+        if (!hiddenOrderList.isEmpty() && activeKitchenOrders < availableChefs) {
+            String order = hiddenOrderList.poll();
+            if (order != null) {
+                String[] parts = order.split(" ");
+                int id = Integer.parseInt(parts[0]); // Extract customer ID
+                Menu.MealType meal = Menu.MealType.valueOf(parts[1]); // Extract meal type
+                moveToKitchen(id, meal);
+            }
+        }
+    }
+
 
     private void moveToLeft(int id, Menu.MealType meal) {
         // Get the time when the customer first arrived
@@ -254,11 +228,6 @@ public class demo extends Application {
         // Add the customer to the left list with their total time spent
         leftList.add("Customer " + id + " left after " + timeSpent + " (Ordered " + meal.name() + ")");
         updateLeftLabel();
-
-        // Stop the timer when the customer leaves
-        customerTimers.get(id).endServed();
-        customerTimers.get(id).endTimer();
-
 
         // Remove the customer from the served list once they leave
         servedList.removeIf(order -> order.startsWith("Customer " + id));
@@ -278,18 +247,23 @@ public class demo extends Application {
     }
 
 
+    private void moveToWaiting(int id, Menu.MealType meal) {
+        orderingContent.setText(orderingContent.getText().replace("Customer " + id + " is ordering\n", ""));
+        activeOrders--;
+        orderingLabel.setText("Ordering (" + activeOrders + "):");
 
-    private void processWaitingList() {
-        if (!hiddenOrderList.isEmpty() && activeKitchenOrders < availableChefs) {
-            String order = hiddenOrderList.poll();
-            if (order != null) {
-                String[] parts = order.split(" ");
-                int id = Integer.parseInt(parts[0]); // Extract customer ID
-                Menu.MealType meal = Menu.MealType.valueOf(parts[1]); // Extract meal type
-                moveToKitchen(id, meal);
-            }
-        }
+        // Add to visible waiting list for UI
+        waitingList.add("Customer " + id + " is waiting for " + meal.name());
+        updateWaitingLabel();
+
+        // Add to hidden order list for kitchen processing
+        hiddenOrderList.add(id + " " + meal.name());
+
+        processWaitingList(); // Check if we can move an order into the kitchen
+        processQueue();
     }
+
+
 
 
     private void updateQueueLabel() {
@@ -331,6 +305,7 @@ public class demo extends Application {
         processQueue();
     }
 
+    // Modifying amount of chefs
     private void updateChefs(int chefs) {
         availableChefs = chefs;
         orderQueue.setChefs(chefs);
@@ -338,6 +313,7 @@ public class demo extends Application {
     }
 
 
+    // Kitchen worker
     // Kitchen worker - Monitors and moves waiting customers when space is available
     private void startKitchenWorker() {
         new Thread(() -> {
@@ -364,80 +340,10 @@ public class demo extends Application {
         }).start();
     }
 
+
+
+
     public static void main(String[] args) {
         launch(args);
     }
-
-    class CustomerTimers {
-        private long queueStartTime;
-        private long queueEndTime;
-        private long orderingStartTime;
-        private long orderingEndTime;
-        private long waitingStartTime;
-        private long waitingEndTime;
-        private long kitchenStartTime;
-        private long kitchenEndTime;
-        private long servedStartTime;
-        private long servedEndTime;
-
-        void startQueue() {
-            queueStartTime = System.currentTimeMillis();
-        }
-
-        void endQueue() {
-            queueEndTime = System.currentTimeMillis();
-        }
-
-        void startOrdering() {
-            orderingStartTime = System.currentTimeMillis();
-        }
-
-        void endOrdering() {
-            orderingEndTime = System.currentTimeMillis();
-        }
-
-        void startWaiting() {
-            waitingStartTime = System.currentTimeMillis();
-        }
-
-        void endWaiting() {
-            waitingEndTime = System.currentTimeMillis();
-        }
-
-        void startKitchen() {
-            kitchenStartTime = System.currentTimeMillis();
-        }
-
-        void endKitchen() {
-            kitchenEndTime = System.currentTimeMillis();
-        }
-
-        void startServed() {
-            servedStartTime = System.currentTimeMillis();
-        }
-
-        void endServed() {
-            servedEndTime = System.currentTimeMillis();
-        }
-
-        void endTimer() {
-            // Print time spent in each stage
-            long queueTime = queueEndTime - queueStartTime;
-            long orderingTime = orderingEndTime - orderingStartTime;
-            long waitingTime = waitingEndTime - waitingStartTime;
-            long kitchenTime = kitchenEndTime - kitchenStartTime;
-            long servedTime = servedEndTime - servedStartTime;
-
-            System.out.println("Customer's time breakdown:");
-            System.out.println("Queue: " + formatTime(queueTime));
-            System.out.println("Ordering: " + formatTime(orderingTime));
-            System.out.println("Waiting: " + formatTime(waitingTime));
-            System.out.println("Kitchen: " + formatTime(kitchenTime));
-            System.out.println("Served: " + formatTime(servedTime));
-            System.out.println("Total Time in Restaurant: " + formatTime(queueTime + orderingTime + waitingTime  + servedTime));
-        }
-
-
-    }
-
 }
