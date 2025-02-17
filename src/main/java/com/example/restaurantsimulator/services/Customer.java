@@ -6,12 +6,14 @@ public class Customer {
     private Menu.MealType order;
     private double satisfaction;
     private boolean orderReceived;
+    private boolean isServed; // New boolean to track if the customer is served
 
     public Customer(Menu.MealType order) {
         this.id = idCounter++;
         this.order = order;
         this.satisfaction = 100.0;
         this.orderReceived = false;
+        this.isServed = false;  // Initially, the customer is not served
         startSatisfactionTimer();
     }
 
@@ -25,6 +27,14 @@ public class Customer {
 
     public double getSatisfaction() {
         return satisfaction;
+    }
+
+    public boolean isServed() {  // Getter for isServed
+        return isServed;
+    }
+
+    public void serve() {  // Method to mark the customer as served
+        this.isServed = true;
     }
 
     // Starts a timer that reduces satisfaction by 0.5% per second
