@@ -150,7 +150,8 @@ public class demo extends Application {
 
             new Thread(() -> {
                 try {
-                    Thread.sleep(7000); // Simulate time for customer to place order
+                    int orderingTime = 10000 + random.nextInt(11000);
+                    Thread.sleep(orderingTime); // Simulate time for customer to place order
 
                     // Randomly select a meal from the Menu class
                     int index = random.nextInt(Menu.MealType.values().length);
@@ -438,5 +439,3 @@ public class demo extends Application {
         }
     }
 }
-
-// test
