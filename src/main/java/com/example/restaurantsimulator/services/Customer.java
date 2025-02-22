@@ -1,7 +1,9 @@
 package com.example.restaurantsimulator.services;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class Customer {
-    private static int idCounter = 1;
+    private static AtomicInteger idCounter = new AtomicInteger(0); // Use AtomicInteger instead of int
     private int id;
     private Menu.MealType order;
     private double satisfaction;
@@ -9,7 +11,7 @@ public class Customer {
     private boolean isServed;
 
     public Customer() {
-        this.id = idCounter++;
+        this.id = idCounter.getAndIncrement(); // Atomically increment the ID
         this.satisfaction = 100.0;
         this.orderReceived = false;
         this.isServed = false;
@@ -57,4 +59,7 @@ public class Customer {
         orderReceived = true;
         System.out.printf("Customer %d received their %s. Satisfaction: %.2f%%%n", id, order.name(), satisfaction);
     }
+
+
+
 }

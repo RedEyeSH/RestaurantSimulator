@@ -69,11 +69,11 @@ public class demo extends Application {
         HBox mainLayout = new HBox(50, queueBox, orderingBox, waitingBox, kitchenBox, servedBox, leftBox);
 
         // Dropdown for selecting the number of ordering machines
-        machineSelector.getItems().addAll(1, 2, 3);
+        machineSelector.getItems().addAll(1, 2, 3, 4, 5, 6, 7, 8, 9, 10); // Adjust max machines as needed
         machineSelector.setValue(1);
         machineSelector.setOnAction(e -> updateOrderingMachines(machineSelector.getValue()));
         ComboBox<Integer> chefSelector = new ComboBox<>();
-        chefSelector.getItems().addAll(1, 2, 3, 4, 5); // Adjust max chefs as needed
+        chefSelector.getItems().addAll(1, 2, 3, 4, 5, 6, 7, 8, 9, 10); // Adjust max chefs as needed
         chefSelector.setValue(1);
         chefSelector.setOnAction(e -> updateChefs(chefSelector.getValue()));
 
@@ -97,10 +97,12 @@ public class demo extends Application {
         new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(2000);
-                    int id = customerID.getAndIncrement();
-                    long startTime = System.currentTimeMillis();
-                    Platform.runLater(() -> addCustomerToQueue(id, startTime));
+                    Thread.sleep(3000);  // Simulate time between customer arrivals
+                    synchronized (this) {
+                        int id = customerID.getAndIncrement();  // Increment and get customer ID safely
+                        long startTime = System.currentTimeMillis();
+                        Platform.runLater(() -> addCustomerToQueue(id, startTime));  // Use id directly here
+                    }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -109,6 +111,8 @@ public class demo extends Application {
 
         startKitchenWorker(); // Start monitoring kitchen availability
     }
+
+
 
     private void addCustomerToQueue(int id, long startTime) {
         customerArrivalTimes.put(id, startTime);
@@ -123,6 +127,7 @@ public class demo extends Application {
         processQueue();
         startQueueTimer();
     }
+
 
     private void startQueueTimer() {
         new Thread(() -> {
