@@ -1,4 +1,4 @@
-package com.restaurant;
+/*package com.restaurant;
 
 import com.example.restaurantsimulator.services.Customer;
 import com.example.restaurantsimulator.services.CustomerQueue;
@@ -26,11 +26,9 @@ public class RestaurantSimulation {
         System.out.print("Enter how often rush hour occurs (milliseconds): ");
         int rushHourInterval = scanner.nextInt();
 
-        // 🎯 Step 2: Initialize Restaurant Components
         CustomerQueue customerQueue = new CustomerQueue();
         OrderQueue orderQueue = new OrderQueue(numChefs);
 
-        // 🎯 Step 3: Simulate Customer Arrivals with Rush Hour
         new Thread(() -> {
             boolean isRushHour = false;
             long lastRushHourStart = System.currentTimeMillis();
@@ -63,3 +61,5 @@ public class RestaurantSimulation {
         new Thread(orderQueue::processOrders).start();
     }
 }
+
+ */

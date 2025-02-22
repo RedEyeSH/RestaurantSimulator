@@ -20,7 +20,7 @@ import com.example.restaurantsimulator.services.OrderQueue;
 public class demo extends Application {
     private static final int MAX_MACHINES = 3;
     private Queue<Integer> queue = new LinkedList<>();
-    private Map<Integer, Customer> customerList = new HashMap<>();  // Track customers directly in a map
+    private Map<Integer, Customer> customerList = new ConcurrentHashMap<>();
     private Queue<String> kitchenList = new LinkedList<>();
     private Queue<String> waitingList = new LinkedList<>();
     private Queue<String> servedList = new LinkedList<>();
@@ -55,7 +55,7 @@ public class demo extends Application {
     private int availableChefs = 1; // Default chef count
 
     // Store timers for each customer at each stage
-    private Map<Integer, CustomerTimers> customerTimers = new HashMap<>();
+    private Map<Integer, CustomerTimers> customerTimers = new ConcurrentHashMap<>();
 
     @Override
     public void start(Stage primaryStage) {
@@ -114,13 +114,14 @@ public class demo extends Application {
         customerArrivalTimes.put(id, startTime);
         queue.add(id);
 
-        // Initialize timers for the customer
         customerTimers.put(id, new CustomerTimers());
         customerTimers.get(id).startQueue();
 
+        customerList.put(id, new Customer()); // Create customer without a meal
+
         updateQueueLabel();
         processQueue();
-        startQueueTimer(); // Start the real-time timer for queue customers
+        startQueueTimer();
     }
 
     private void startQueueTimer() {
@@ -144,28 +145,33 @@ public class demo extends Application {
             orderingContent.setText(orderingContent.getText() + "Customer " + id + " is ordering\n");
             updateQueueLabel();
 
-            // Start timer when the customer enters ordering
             customerTimers.get(id).endQueue();
             customerTimers.get(id).startOrdering();
 
             new Thread(() -> {
                 try {
                     int orderingTime = 10000 + random.nextInt(11000);
-                    Thread.sleep(orderingTime); // Simulate time for customer to place order
+                    Thread.sleep(orderingTime);
 
-                    // Randomly select a meal from the Menu class
-                    int index = random.nextInt(Menu.MealType.values().length);
-                    Menu.MealType meal = Menu.MealType.values()[index];
+                    // Ensure meal selection is valid
+                    Menu.MealType[] meals = Menu.MealType.values();
+                    if (meals.length == 0) {
+                        System.err.println("Error: No meals available for Customer " + id);
+                        return; // Prevents a crash
+                    }
 
-                    // Add the order to the orderQueue
-                    customerList.put(id, new Customer(meal));
+                    int index = random.nextInt(meals.length);
+                    Menu.MealType meal = meals[index];
 
-                    // Move the customer to the waiting list
+                    Customer customer = customerList.get(id);
+                    if (customer == null) {
+                        System.err.println("Error: Customer " + id + " not found in customerList.");
+                        return;
+                    }
+
+                    customer.assignOrder(meal);
                     Platform.runLater(() -> moveToWaiting(id, meal));
-
-                    // Add the order to the OrderQueue for processing
-                    orderQueue.addOrder(new Customer(meal), meal);
-
+                    orderQueue.addOrder(customer, meal);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -193,6 +199,11 @@ public class demo extends Application {
     }
 
     private void moveToKitchen(int id, Menu.MealType meal) {
+        if (meal == null) {
+            System.err.println("Error: Meal is null for Customer " + id + ". Skipping kitchen process.");
+            return; // Prevents crash
+        }
+
         if (activeKitchenOrders >= availableChefs) {
             return; // Kitchen is full, don't move customer yet
         }
@@ -246,7 +257,7 @@ public class demo extends Application {
 
     private void moveToLeft(int id, Menu.MealType meal) {
         // Get the time when the customer first arrived
-        long startTime = customerArrivalTimes.get(id);
+        long startTime = customerArrivalTimes.getOrDefault(id, System.currentTimeMillis()); // Prevent null
         long totalTime = System.currentTimeMillis() - startTime; // Time spent in the restaurant
 
         // Format the total time
@@ -282,7 +293,13 @@ public class demo extends Application {
             for (Map.Entry<Integer, Customer> entry : customerList.entrySet()) {
                 Customer customer = entry.getValue();
                 if (!customer.isServed() && activeKitchenOrders < availableChefs) {
-                    moveToKitchen(entry.getKey(), customer.getOrder());
+                    Menu.MealType meal = customer.getOrder();
+
+                    if (meal == null) {
+                        continue; // Skip this customer
+                    }
+
+                    moveToKitchen(entry.getKey(), meal);
                     customer.serve();
                 }
             }
