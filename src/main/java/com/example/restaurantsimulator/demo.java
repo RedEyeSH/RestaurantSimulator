@@ -72,6 +72,7 @@ public class demo extends Application {
         machineSelector.getItems().addAll(1, 2, 3, 4, 5, 6, 7, 8, 9, 10); // Adjust max machines as needed
         machineSelector.setValue(1);
         machineSelector.setOnAction(e -> updateOrderingMachines(machineSelector.getValue()));
+
         ComboBox<Integer> chefSelector = new ComboBox<>();
         chefSelector.getItems().addAll(1, 2, 3, 4, 5, 6, 7, 8, 9, 10); // Adjust max chefs as needed
         chefSelector.setValue(1);
@@ -88,6 +89,11 @@ public class demo extends Application {
         primaryStage.setTitle("Restaurant Simulation");
         primaryStage.setScene(scene);
         primaryStage.show();
+
+        primaryStage.setOnCloseRequest(event -> {
+            System.out.println("Closing application...");
+            System.exit(0);
+        });
 
         orderQueue = new OrderQueue(availableMachines);  // Initialize the order queue with chefs
         startSimulation();
@@ -111,8 +117,6 @@ public class demo extends Application {
 
         startKitchenWorker(); // Start monitoring kitchen availability
     }
-
-
 
     private void addCustomerToQueue(int id, long startTime) {
         customerArrivalTimes.put(id, startTime);
@@ -378,74 +382,73 @@ public class demo extends Application {
         launch(args);
     }
 
+    class CustomerTimers {
+        private long queueStartTime;
+        private long queueEndTime;
+        private long orderingStartTime;
+        private long orderingEndTime;
+        private long waitingStartTime;
+        private long waitingEndTime;
+        private long kitchenStartTime;
+        private long kitchenEndTime;
+        private long servedStartTime;
+        private long servedEndTime;
 
-class CustomerTimers {
-    private long queueStartTime;
-    private long queueEndTime;
-    private long orderingStartTime;
-    private long orderingEndTime;
-    private long waitingStartTime;
-    private long waitingEndTime;
-    private long kitchenStartTime;
-    private long kitchenEndTime;
-    private long servedStartTime;
-    private long servedEndTime;
+        void startQueue() {
+            queueStartTime = System.currentTimeMillis();
+        }
 
-    void startQueue() {
-        queueStartTime = System.currentTimeMillis();
+        void endQueue() {
+            queueEndTime = System.currentTimeMillis();
+        }
+
+        void startOrdering() {
+            orderingStartTime = System.currentTimeMillis();
+        }
+
+        void endOrdering() {
+            orderingEndTime = System.currentTimeMillis();
+        }
+
+        void startWaiting() {
+            waitingStartTime = System.currentTimeMillis();
+        }
+
+        void endWaiting() {
+            waitingEndTime = System.currentTimeMillis();
+        }
+
+        void startKitchen() {
+            kitchenStartTime = System.currentTimeMillis();
+        }
+
+        void endKitchen() {
+            kitchenEndTime = System.currentTimeMillis();
+        }
+
+        void startServed() {
+            servedStartTime = System.currentTimeMillis();
+        }
+
+        void endServed() {
+            servedEndTime = System.currentTimeMillis();
+        }
+
+        void endTimer() {
+            // Print time spent in each stage
+            long queueTime = queueEndTime - queueStartTime;
+            long orderingTime = orderingEndTime - orderingStartTime;
+            long waitingTime = waitingEndTime - waitingStartTime;
+            long kitchenTime = kitchenEndTime - kitchenStartTime;
+            long servedTime = servedEndTime - servedStartTime;
+
+            System.out.println("Customer's time breakdown:");
+            System.out.println("Queue: " + formatTime(queueTime));
+            System.out.println("Ordering: " + formatTime(orderingTime));
+            System.out.println("Waiting: " + formatTime(waitingTime));
+            System.out.println("Kitchen: " + formatTime(kitchenTime));
+            System.out.println("Served: " + formatTime(servedTime));
+            System.out.println("Total Time in Restaurant: " + formatTime(queueTime + orderingTime + waitingTime + servedTime));
+        }
     }
-
-    void endQueue() {
-        queueEndTime = System.currentTimeMillis();
-    }
-
-    void startOrdering() {
-        orderingStartTime = System.currentTimeMillis();
-    }
-
-    void endOrdering() {
-        orderingEndTime = System.currentTimeMillis();
-    }
-
-    void startWaiting() {
-        waitingStartTime = System.currentTimeMillis();
-    }
-
-    void endWaiting() {
-        waitingEndTime = System.currentTimeMillis();
-    }
-
-    void startKitchen() {
-        kitchenStartTime = System.currentTimeMillis();
-    }
-
-    void endKitchen() {
-        kitchenEndTime = System.currentTimeMillis();
-    }
-
-    void startServed() {
-        servedStartTime = System.currentTimeMillis();
-    }
-
-    void endServed() {
-        servedEndTime = System.currentTimeMillis();
-    }
-
-    void endTimer() {
-        // Print time spent in each stage
-        long queueTime = queueEndTime - queueStartTime;
-        long orderingTime = orderingEndTime - orderingStartTime;
-        long waitingTime = waitingEndTime - waitingStartTime;
-        long kitchenTime = kitchenEndTime - kitchenStartTime;
-        long servedTime = servedEndTime - servedStartTime;
-
-        System.out.println("Customer's time breakdown:");
-        System.out.println("Queue: " + formatTime(queueTime));
-        System.out.println("Ordering: " + formatTime(orderingTime));
-        System.out.println("Waiting: " + formatTime(waitingTime));
-        System.out.println("Kitchen: " + formatTime(kitchenTime));
-        System.out.println("Served: " + formatTime(servedTime));
-        System.out.println("Total Time in Restaurant: " + formatTime(queueTime + orderingTime + waitingTime + servedTime));
-    }
-}
 }
