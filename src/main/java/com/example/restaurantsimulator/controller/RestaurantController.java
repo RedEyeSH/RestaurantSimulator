@@ -49,7 +49,7 @@ public class RestaurantController {
         new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(3000);  // Simulate time between customer arrivals
+                    Thread.sleep(2000);  // Simulate time between customer arrivals
                     synchronized (this) {
                         int id = customerID.getAndIncrement();
                         long startTime = System.currentTimeMillis();
