@@ -1,6 +1,5 @@
 package com.example.restaurantsimulator.model;
 
-
 public class CustomerTimers {
     private long queueStartTime;
     private long queueEndTime;
@@ -12,6 +11,12 @@ public class CustomerTimers {
     private long kitchenEndTime;
     private long servedStartTime;
     private long servedEndTime;
+
+    private int id;
+
+    public CustomerTimers(int id) {
+        this.id = id;
+    }
 
     public void startQueue() {
         queueStartTime = System.currentTimeMillis();
@@ -61,7 +66,7 @@ public class CustomerTimers {
         long kitchenTime = kitchenEndTime - kitchenStartTime;
         long servedTime = servedEndTime - servedStartTime;
 
-        System.out.println("Customer's time breakdown:");
+        System.out.println("Customer " + id + " time breakdown:");
         System.out.println("Queue: " + formatTime(queueTime));
         System.out.println("Ordering: " + formatTime(orderingTime));
         System.out.println("Waiting: " + formatTime(waitingTime));

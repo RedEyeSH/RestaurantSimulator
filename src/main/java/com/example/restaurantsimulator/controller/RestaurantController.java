@@ -1,7 +1,5 @@
 package com.example.restaurantsimulator.controller;
 
-
-
 import com.example.restaurantsimulator.demo;
 import javafx.application.Platform;
 import com.example.restaurantsimulator.model.Customer;
@@ -67,13 +65,11 @@ public class RestaurantController {
     }
 
 
-
-
     private void addCustomerToQueue(int id, long startTime) {
         customerArrivalTimes.put(id, startTime);
         queue.add(id);
 
-        customerTimers.put(id, new CustomerTimers());
+        customerTimers.put(id, new CustomerTimers(id));
         customerTimers.get(id).startQueue();
 
         customerList.put(id, new Customer());
