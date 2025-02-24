@@ -78,19 +78,15 @@ public class RestaurantController {
         processQueue();
         startQueueTimer();
 
-        System.out.println(availableMachines);
     }
     public void updateAvailableMachines(int selectedMachines) {
         this.availableMachines = selectedMachines;
-        System.out.println("Selected machines: " + selectedMachines);
         updateOrderingMachines(selectedMachines);
     }
 
     // Method to update available chefs when the selection changes
     public void updateAvailableChefs(int selectedChefs) {
         this.availableChefs = selectedChefs;
-        // Additional logic to adjust the simulation based on available chefs if necessary
-        System.out.println("Selected chefs: " + selectedChefs);
         updateChefs(selectedChefs);
     }
 
@@ -235,7 +231,32 @@ public class RestaurantController {
     }
 
     private void updateQueueLabel() {
-        view.getQueueLabel().setText("Queue (" + queue.size() + "):");
+        // Get the current queue size
+        int queueSize = queue.size();
+
+        // Calculate the rounded size to the nearest multiple of 5
+        int roundedSize;
+
+        // Calculate the remainder when divided by 5
+        int remainder = queueSize % 5;
+
+        if (remainder == 0) {
+            // If it's already a multiple of 5, no rounding needed
+            roundedSize = queueSize;
+        } else {
+            if (remainder >= 3) {
+                // If the remainder is 3 or more, round up to the next multiple of 5
+                roundedSize = (queueSize / 5 + 1) * 5;
+            } else {
+                // If the remainder is less than 3, round down to the previous multiple of 5
+                roundedSize = (queueSize / 5) * 5;
+            }
+        }
+
+        // Set the Queue label with both the current queue size and the rounded size
+        view.getQueueLabel().setText("Queue (" + queueSize + "): Avg: " + roundedSize);
+
+        // Update the content with the queue details
         StringBuilder sb = new StringBuilder();
         long currentTime = System.currentTimeMillis();
 
@@ -244,11 +265,34 @@ public class RestaurantController {
             sb.append("Customer ").append(id).append(" - Waiting for ")
                     .append(formatTime(elapsedTime)).append("\n");
         }
-        view.getQueueContent().setText(sb.toString());
+        view.getQueueContent().setText(sb.toString()); // Display the queue details
     }
 
+
+
     private void updateWaitingLabel() {
-        view.getWaitingLabel().setText("Waiting (" + waitingList.size() + "):");
+        // Get the current queue size
+        int queueSize = waitingList.size();
+
+        // Calculate the rounded size to the nearest multiple of 5
+        int roundedSize;
+
+        // Calculate the remainder when divided by 5
+        int remainder = queueSize % 5;
+
+        if (remainder == 0) {
+            // If it's already a multiple of 5, no rounding needed
+            roundedSize = queueSize;
+        } else {
+            if (remainder >= 3) {
+                // If the remainder is 3 or more, round up to the next multiple of 5
+                roundedSize = (queueSize / 5 + 1) * 5;
+            } else {
+                // If the remainder is less than 3, round down to the previous multiple of 5
+                roundedSize = (queueSize / 5) * 5;
+            }
+        }
+        view.getWaitingLabel().setText("Waiting (" + waitingList.size() + ") Avg: " + roundedSize);
         view.getWaitingContent().setText(String.join("\n", waitingList));
     }
 
@@ -258,7 +302,28 @@ public class RestaurantController {
     }
 
     private void updateServedLabel() {
-        view.getServedLabel().setText("Served (" + servedList.size() + "):");
+        // Get the current queue size
+        int queueSize = servedList.size();
+
+        // Calculate the rounded size to the nearest multiple of 5
+        int roundedSize;
+
+        // Calculate the remainder when divided by 5
+        int remainder = queueSize % 5;
+
+        if (remainder == 0) {
+            // If it's already a multiple of 5, no rounding needed
+            roundedSize = queueSize;
+        } else {
+            if (remainder >= 3) {
+                // If the remainder is 3 or more, round up to the next multiple of 5
+                roundedSize = (queueSize / 5 + 1) * 5;
+            } else {
+                // If the remainder is less than 3, round down to the previous multiple of 5
+                roundedSize = (queueSize / 5) * 5;
+            }
+        }
+        view.getServedLabel().setText("Served (" + servedList.size() + ") Avg: " + roundedSize);
         view.getServedContent().setText(String.join("\n", servedList));
     }
 
@@ -303,7 +368,6 @@ public class RestaurantController {
         availableMachines = machines;
         orderQueue = new OrderQueue(availableMachines);  // Reinitialize the order queue with new number of chefs
         processQueue();
-        System.out.println("Updated ordering machines to " + machines);
     }
 
     private void startQueueTimer() {
