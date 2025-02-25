@@ -48,7 +48,7 @@ public class RestaurantView {
         chefSelector = new ComboBox<>();
 
         // Populate ComboBoxes with numbers from 1 to 5
-        for (int i = 1; i <= 5; i++) {
+        for (int i = 1; i <= 10; i++) {
             machineSelector.getItems().add(i);
             chefSelector.getItems().add(i);
         }
