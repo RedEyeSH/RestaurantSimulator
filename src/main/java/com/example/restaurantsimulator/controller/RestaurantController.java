@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RestaurantController {
 
     private static final int MAX_MACHINES = 3;
+    private static final int FULL_RESTAURANT = 50; // Defining maximum amount of customers in the restaurant
     private Queue<Integer> queue = new LinkedList<>();
     private Map<Integer, Customer> customerList = new ConcurrentHashMap<>();
     private Queue<String> kitchenList = new LinkedList<>();
@@ -64,6 +65,12 @@ public class RestaurantController {
         startKitchenWorker();
     }
 
+    private int getTotalCustomers() {
+        return  activeOrders + waitingList.size() + servedList.size();
+                // Orders,     Waiting,             Served
+    }
+
+
 
     private void addCustomerToQueue(int id, long startTime) {
         customerArrivalTimes.put(id, startTime);
@@ -91,7 +98,12 @@ public class RestaurantController {
     }
 
     private void processQueue() {
+        System.out.println("Total amount of customers in the restaurant: " + getTotalCustomers());
         while (activeOrders < availableMachines && !queue.isEmpty()) {
+            if (getTotalCustomers() >= FULL_RESTAURANT) {
+                return; // Stop processing if the restaurant is full
+            }
+
             int id = queue.poll();
             activeOrders++;
             view.getOrderingLabel().setText("Ordering (" + activeOrders + "):");
@@ -130,6 +142,7 @@ public class RestaurantController {
             }).start();
         }
     }
+
 
 
     private void moveToWaiting(int id, Menu.MealType meal) {
