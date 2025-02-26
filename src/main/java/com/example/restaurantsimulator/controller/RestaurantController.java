@@ -24,6 +24,7 @@ public class RestaurantController {
     private Queue<String> kitchenList = new LinkedList<>();
     private Queue<String> waitingList = new LinkedList<>();
     private Queue<String> servedList = new LinkedList<>();
+    private Queue<String> payList = new LinkedList<>();  // The pay list
     private Queue<String> leftList = new LinkedList<>();
 
     private Map<Integer, Long> customerArrivalTimes = new ConcurrentHashMap<>();
@@ -52,9 +53,9 @@ public class RestaurantController {
                 try {
                     Thread.sleep(2000);  // Simulate time between customer arrivals
                     synchronized (this) {
-                        int id = customerID.getAndIncrement();
+                        Customer customer = new Customer(); // Create a new customer
                         long startTime = System.currentTimeMillis();
-                        Platform.runLater(() -> addCustomerToQueue(id, startTime));
+                        Platform.runLater(() -> addCustomerToQueue(customer, startTime));
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -65,27 +66,27 @@ public class RestaurantController {
         startKitchenWorker();
     }
 
+
     private int getTotalCustomers() {
-        return  activeOrders + waitingList.size() + servedList.size();
+        return  activeOrders + waitingList.size() + servedList.size() + payList.size();
                 // Orders,     Waiting,             Served
     }
 
 
 
-    private void addCustomerToQueue(int id, long startTime) {
+    private void addCustomerToQueue(Customer customer, long startTime) {
+        int id = customer.getId(); // Retrieve the already assigned ID
         customerArrivalTimes.put(id, startTime);
         queue.add(id);
-
         customerTimers.put(id, new CustomerTimers(id));
         customerTimers.get(id).startQueue();
-
-        customerList.put(id, new Customer());
+        customerList.put(id, customer);
 
         updateQueueLabel();
         processQueue();
         startQueueTimer();
-
     }
+
     public void updateAvailableMachines(int selectedMachines) {
         this.availableMachines = selectedMachines;
         updateOrderingMachines(selectedMachines);
@@ -210,14 +211,37 @@ public class RestaurantController {
 
         new Thread(() -> {
             try {
-                int leaveTime = new Random().nextInt(5001) + 10000;
+                int leaveTime =  meal.getPrepTime() * 1000 + 10000; // Simulate eating time + 5 seconds
                 Thread.sleep(leaveTime);
+                Platform.runLater(() -> moveToPayList(id, meal));  // Move to pay list
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    private void moveToPayList(int id, Menu.MealType meal) {
+        // Remove the customer from the served list and add them to the payList
+        servedList.removeIf(order -> order.startsWith("Customer " + id));
+        updateServedLabel();
+
+        payList.add("Customer " + id + " - " + meal.name() + " is paying");
+        updatePayListLabel();
+
+        customerTimers.get(id).startPay();
+        customerTimers.get(id).endServed();
+
+        // Wait for 5 seconds before moving the customer to the left list
+        new Thread(() -> {
+            try {
+                Thread.sleep(10000);
                 Platform.runLater(() -> moveToLeft(id, meal));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }).start();
     }
+
 
     private void moveToLeft(int id, Menu.MealType meal) {
         // Get the time when the customer first arrived
@@ -227,47 +251,28 @@ public class RestaurantController {
         // Format the total time
         String timeSpent = formatTime(totalTime);
 
-        // Add the customer to the left list with their total time spent
+        // Add customer to left list after the payment
         leftList.add("Customer " + id + " left after " + timeSpent + " (Ordered " + meal.name() + ")");
         updateLeftLabel();
 
         // Stop the timer when the customer leaves
-        customerTimers.get(id).endServed();
+        customerTimers.get(id).endPay();
         customerTimers.get(id).endTimer();
 
-        // Remove the customer from the served list once they leave
-        servedList.removeIf(order -> order.startsWith("Customer " + id));
-        updateServedLabel();
+        // Remove the customer from the payList as they have left
+        payList.removeIf(order -> order.startsWith("Customer " + id));
+        updatePayListLabel();
 
-        // Remove the customer from the list of arrival times as they have left
+        // Remove the customer from the arrival times
         customerArrivalTimes.remove(id);
     }
 
+
     private void updateQueueLabel() {
-        // Get the current queue size
-        int queueSize = queue.size();
-
-        // Calculate the rounded size to the nearest multiple of 5
-        int roundedSize;
-
-        // Calculate the remainder when divided by 5
-        int remainder = queueSize % 5;
-
-        if (remainder == 0) {
-            // If it's already a multiple of 5, no rounding needed
-            roundedSize = queueSize;
-        } else {
-            if (remainder >= 3) {
-                // If the remainder is 3 or more, round up to the next multiple of 5
-                roundedSize = (queueSize / 5 + 1) * 5;
-            } else {
-                // If the remainder is less than 3, round down to the previous multiple of 5
-                roundedSize = (queueSize / 5) * 5;
-            }
-        }
+        int roundedSize = getRoundedSize(queue.size());
 
         // Set the Queue label with both the current queue size and the rounded size
-        view.getQueueLabel().setText("Queue (" + queueSize + "): Avg: " + roundedSize);
+        view.getQueueLabel().setText("Queue (" + queue.size() + "): Avg: " + roundedSize);
 
         // Update the content with the queue details
         StringBuilder sb = new StringBuilder();
@@ -284,29 +289,11 @@ public class RestaurantController {
 
 
     private void updateWaitingLabel() {
-        // Get the current queue size
-        int queueSize = waitingList.size();
+        int roundedSize = getRoundedSize(waitingList.size());
 
-        // Calculate the rounded size to the nearest multiple of 5
-        int roundedSize;
-
-        // Calculate the remainder when divided by 5
-        int remainder = queueSize % 5;
-
-        if (remainder == 0) {
-            // If it's already a multiple of 5, no rounding needed
-            roundedSize = queueSize;
-        } else {
-            if (remainder >= 3) {
-                // If the remainder is 3 or more, round up to the next multiple of 5
-                roundedSize = (queueSize / 5 + 1) * 5;
-            } else {
-                // If the remainder is less than 3, round down to the previous multiple of 5
-                roundedSize = (queueSize / 5) * 5;
-            }
-        }
         view.getWaitingLabel().setText("Waiting (" + waitingList.size() + ") Avg: " + roundedSize);
         view.getWaitingContent().setText(String.join("\n", waitingList));
+
     }
 
     private void updateKitchenLabel() {
@@ -315,35 +302,30 @@ public class RestaurantController {
     }
 
     private void updateServedLabel() {
-        // Get the current queue size
-        int queueSize = servedList.size();
+        int roundedSize = getRoundedSize(servedList.size());
 
-        // Calculate the rounded size to the nearest multiple of 5
-        int roundedSize;
-
-        // Calculate the remainder when divided by 5
-        int remainder = queueSize % 5;
-
-        if (remainder == 0) {
-            // If it's already a multiple of 5, no rounding needed
-            roundedSize = queueSize;
-        } else {
-            if (remainder >= 3) {
-                // If the remainder is 3 or more, round up to the next multiple of 5
-                roundedSize = (queueSize / 5 + 1) * 5;
-            } else {
-                // If the remainder is less than 3, round down to the previous multiple of 5
-                roundedSize = (queueSize / 5) * 5;
-            }
-        }
         view.getServedLabel().setText("Served (" + servedList.size() + ") Avg: " + roundedSize);
         view.getServedContent().setText(String.join("\n", servedList));
+    }
+
+    private void updatePayListLabel() {
+        view.getPayLabel().setText("Paying (" + payList.size() + "):");
+        view.getPayContent().setText(String.join("\n", payList));
     }
 
     private void updateLeftLabel() {
         view.getLeftLabel().setText("Left (" + leftList.size() + "):");
         view.getLeftContent().setText(String.join("\n", leftList));
     }
+
+    private int getRoundedSize(int size) {
+        int remainder = size % 5;
+        if (remainder == 0) {
+            return size; // Already a multiple of 5
+        }
+        return (remainder >= 3) ? ((size / 5 + 1) * 5) : ((size / 5) * 5);
+    }
+
 
     private String formatTime(long millis) {
         long seconds = millis / 1000;

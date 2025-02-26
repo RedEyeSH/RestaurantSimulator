@@ -10,9 +10,9 @@ import com.example.restaurantsimulator.controller.RestaurantController;
 
 public class RestaurantView {
 
-    private VBox queueBox, orderingBox, waitingBox, kitchenBox, servedBox, leftBox;
-    private Label queueLabel, orderingLabel, waitingLabel, kitchenLabel, servedLabel, leftLabel;
-    private Label queueContent, orderingContent, waitingContent, kitchenContent, servedContent, leftContent;
+    private VBox queueBox, orderingBox, waitingBox, kitchenBox, servedBox, payBox, leftBox;
+    private Label queueLabel, orderingLabel, waitingLabel, kitchenLabel, servedLabel, payLabel, leftLabel;
+    private Label queueContent, orderingContent, waitingContent, kitchenContent, servedContent, payContent, leftContent;
     private ComboBox<Integer> machineSelector;
     private ComboBox<Integer> chefSelector;
 
@@ -25,6 +25,7 @@ public class RestaurantView {
         waitingLabel = new Label("Waiting (0):");
         kitchenLabel = new Label("Kitchen (0):");
         servedLabel = new Label("Served (0):");
+        payLabel = new Label("Pay (0):");
         leftLabel = new Label("Left (0):");
 
         queueContent = new Label();
@@ -32,6 +33,7 @@ public class RestaurantView {
         waitingContent = new Label();
         kitchenContent = new Label();
         servedContent = new Label();
+        payContent = new Label();
         leftContent = new Label();
 
         queueBox = new VBox(10, queueLabel, queueContent);
@@ -39,9 +41,10 @@ public class RestaurantView {
         waitingBox = new VBox(10, waitingLabel, waitingContent);
         kitchenBox = new VBox(10, kitchenLabel, kitchenContent);
         servedBox = new VBox(10, servedLabel, servedContent);
+        payBox = new VBox(10, payLabel, payContent);
         leftBox = new VBox(10, leftLabel, leftContent);
 
-        HBox mainLayout = new HBox(50, queueBox, orderingBox, waitingBox, kitchenBox, servedBox, leftBox);
+        HBox mainLayout = new HBox(50, queueBox, orderingBox, waitingBox, kitchenBox, servedBox, payBox, leftBox);
 
         // Create ComboBoxes for selecting machines and chefs
         machineSelector = new ComboBox<>();
@@ -120,6 +123,10 @@ public class RestaurantView {
         return servedLabel;
     }
 
+    public Label getPayLabel() {
+        return payLabel;
+    }
+
     public Label getLeftLabel() {
         return leftLabel;
     }
@@ -142,6 +149,10 @@ public class RestaurantView {
 
     public Label getServedContent() {
         return servedContent;
+    }
+
+    public Label getPayContent() {
+        return payContent;
     }
 
     public Label getLeftContent() {

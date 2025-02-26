@@ -26,39 +26,4 @@ public class OrderQueue {
         this.availableChefs = chefs;
     }
 
-
-    public void processOrders() {
-        new Thread(() -> {
-            while (true) {
-                try {
-                    Menu.MealType meal = orderQueue.take(); // Waits for an order if empty
-                    Queue<Customer> customerQueue = orderCustomerMap.get(meal);
-                    Customer customer = (customerQueue != null) ? customerQueue.poll() : null;
-
-                    System.out.println("Chef is processing: " + meal.name()); // Add this line
-
-                    chefPool.submit(() -> {  // Assigns order to an available chef
-                        System.out.println("Processing order: " + meal.name() + " (Takes " + meal.getPrepTime() + " minutes)");
-                        try {
-                            Thread.sleep(meal.getPrepTime() * 1000L);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                        System.out.println(meal.name() + " is ready!"); // Add this line
-
-                        if (customer != null) {
-                            customer.receiveOrder();
-                        }
-
-                        if (customerQueue != null && customerQueue.isEmpty()) {
-                            orderCustomerMap.remove(meal);
-                        }
-                    });
-
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }).start();
-    }
 }
