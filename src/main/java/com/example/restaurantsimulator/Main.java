@@ -2,8 +2,8 @@ package com.example.restaurantsimulator;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
-import com.example.restaurantsimulator.view.RestaurantView;
-import com.example.restaurantsimulator.controller.RestaurantController;
+import View.RestaurantView;
+import Controller.RestaurantController;
 
 public class Main extends Application {
 
