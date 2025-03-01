@@ -1,18 +1,17 @@
 package com.example.restaurantsimulator.model;
 
-
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Customer {
-    private static AtomicInteger idCounter = new AtomicInteger(0);
-    private int id;
+    private static final AtomicInteger idCounter = new AtomicInteger(1);
+    private final int id;
     private Menu.MealType order;
     private double satisfaction;
     private boolean orderReceived;
     private boolean isServed;
 
     public Customer() {
-        this.id = idCounter.getAndIncrement();
+        this.id = idCounter.getAndIncrement(); // Auto-assign unique ID
         this.satisfaction = 100.0;
         this.orderReceived = false;
         this.isServed = false;
@@ -60,5 +59,3 @@ public class Customer {
         orderReceived = true;
     }
 }
-
-

@@ -11,6 +11,8 @@ public class CustomerTimers {
     private long kitchenEndTime;
     private long servedStartTime;
     private long servedEndTime;
+    private long payStartTime;
+    private long payEndTime;
 
     private int id;
 
@@ -58,6 +60,14 @@ public class CustomerTimers {
         servedEndTime = System.currentTimeMillis();
     }
 
+    public void startPay() {
+        payStartTime = System.currentTimeMillis();
+    }
+
+    public void endPay() {
+        payEndTime = System.currentTimeMillis();
+    }
+
     public void endTimer() {
         // Print time spent in each stage
         long queueTime = queueEndTime - queueStartTime;
@@ -65,6 +75,7 @@ public class CustomerTimers {
         long waitingTime = waitingEndTime - waitingStartTime;
         long kitchenTime = kitchenEndTime - kitchenStartTime;
         long servedTime = servedEndTime - servedStartTime;
+        long payTime = payEndTime - payStartTime;
 
         System.out.println("Customer " + id + " time breakdown:");
         System.out.println("Queue: " + formatTime(queueTime));
@@ -72,7 +83,8 @@ public class CustomerTimers {
         System.out.println("Waiting: " + formatTime(waitingTime));
         System.out.println("Kitchen: " + formatTime(kitchenTime));
         System.out.println("Served: " + formatTime(servedTime));
-        System.out.println("Total Time in Restaurant: " + formatTime(queueTime + orderingTime + waitingTime + servedTime));
+        System.out.println("Pay: " + formatTime(payTime));
+        System.out.println("Total Time in Restaurant: " + formatTime(queueTime + orderingTime + waitingTime + servedTime + payTime));
     }
 
     private String formatTime(long millis) {
